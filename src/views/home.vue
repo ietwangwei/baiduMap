@@ -14,19 +14,32 @@
         @click="paintPolygon"
         @rightclick="newPolygon"
       >
+        <!-- 已经绘制的区域 -->
         <bm-polygon
+          v-for="(path, index) of paths"
           :path="path"
-          v-for="path of polygonPath.paths"
-          :key="path.toString()"
-          stroke-color="#007ed2"
-          fill-color="#007ed2"
-          :fill-opacity="0.2"
-          :stroke-opacity="0.5"
-          :stroke-weight="1"
+          :key="index"
+          :stroke-color="drawConfig.strokeColor"
+          :fill-color="drawConfig.fillColor"
+          :fill-opacity="drawConfig.fillOpacity"
+          :stroke-opacity="drawConfig.strokeOpacity"
+          :stroke-weight="drawConfig.strokeWidth"
+        />
+        <!-- 绘制区域 -->
+        <bm-polygon
+          v-for="(path, index) of polygonPath.paths"
+          :path="path"
+          :key="index"
+          :stroke-color="drawConfig.strokeColor"
+          :fill-color="drawConfig.fillColor"
+          :fill-opacity="drawConfig.fillOpacity"
+          :stroke-opacity="drawConfig.strokeOpacity"
+          :stroke-weight="drawConfig.strokeWidth"
           @click="alertpath"
         />
         <bm-control>
-          <button @click="toggle('polygonPath')">{{ polygonPath.editing ? '停止绘制' : '开始绘制' }}</button>
+          <el-button @click="toggle('polygonPath')" size="small">{{ polygonPath.editing ? '停止绘制' : '开始绘制' }}</el-button>
+          <el-button @click="save" size="small">保 存</el-button>
         </bm-control>
         <bm-local-search :keyword="keyword" :auto-viewport="true"></bm-local-search>
       </baidu-map>
@@ -55,6 +68,47 @@ export default {
       polygonPath: {
         editing: false,
         paths: [] // 绘制完成后的经纬度，其实是在画的时候动态push的，因为在点击的时候触发了 paintPolygon 函数
+      },
+      paths: [
+        [
+          {
+            lng: 104.014371,
+            lat: 30.578831
+          },
+          {
+            lng: 104.017748,
+            lat: 30.572239
+          },
+          {
+            lng: 104.022132,
+            lat: 30.57454
+          },
+          {
+            lng: 104.017389,
+            lat: 30.578831
+          }
+        ],
+        [
+          {
+            lng: 104.148146,
+            lat: 30.581443
+          },
+          {
+            lng: 104.118826,
+            lat: 30.506796
+          },
+          {
+            lng: 104.183216,
+            lat: 30.52845
+          }
+        ]
+      ],
+      drawConfig: {
+        strokeColor: '#007ed2', // 边界颜色
+        fillColor: '#007ed2', // 区域颜色
+        fillOpacity: 0.2, // 区域透明度
+        strokeOpacity: 0.5, // 边界线透明度
+        strokeWidth: 1 // 边界线宽
       }
     }
   },
@@ -115,7 +169,6 @@ export default {
     // 设置节点
     paintPolygon (e) {
       if (!this.polygonPath.editing) {
-        alert('请开启绘制模式')
         return
       }
       const { paths } = this.polygonPath
@@ -125,7 +178,8 @@ export default {
     alertpath (e) {
       console.log(e.currentTarget.so)
       console.log(this.polygonPath.paths[0])
-    }
+    },
+    save () {}
   }
 }
 </script>
