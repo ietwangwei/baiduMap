@@ -24,6 +24,8 @@
           :fill-opacity="drawConfig.fillOpacity"
           :stroke-opacity="drawConfig.strokeOpacity"
           :stroke-weight="drawConfig.strokeWidth"
+          :editing="polygonPath.editing"
+          @lineupdate="lineupdateHandler"
         />
         <!-- 绘制区域 -->
         <bm-polygon
@@ -35,7 +37,6 @@
           :fill-opacity="drawConfig.fillOpacity"
           :stroke-opacity="drawConfig.strokeOpacity"
           :stroke-weight="drawConfig.strokeWidth"
-          @click="alertpath"
         />
         <bm-control>
           <el-button @click="toggle('polygonPath')" size="small">{{ polygonPath.editing ? '停止绘制' : '开始绘制' }}</el-button>
@@ -44,6 +45,16 @@
         <bm-local-search :keyword="keyword" :auto-viewport="true"></bm-local-search>
       </baidu-map>
     </div>
+    <el-dialog
+      :visible="saveVisible"
+      title="保存"
+    >
+      <el-form>
+        <el-form-item label="名称" prop="name">
+          <el-input size="small" v-model="name" />
+        </el-form-item>
+      </el-form>
+    </el-dialog>
   </div>
 </template>
 
@@ -64,56 +75,32 @@ export default {
       title: 'demo',
       keyword: '',
       center: { lng: 104.075707, lat: 30.516006 },
-      zoom: 13,
+      zoom: 14,
       polygonPath: {
         editing: false,
-        paths: [] // 绘制完成后的经纬度，其实是在画的时候动态push的，因为在点击的时候触发了 paintPolygon 函数
+        paths: []
       },
-      paths: [
-        [
-          {
-            lng: 104.014371,
-            lat: 30.578831
-          },
-          {
-            lng: 104.017748,
-            lat: 30.572239
-          },
-          {
-            lng: 104.022132,
-            lat: 30.57454
-          },
-          {
-            lng: 104.017389,
-            lat: 30.578831
-          }
-        ],
-        [
-          {
-            lng: 104.148146,
-            lat: 30.581443
-          },
-          {
-            lng: 104.118826,
-            lat: 30.506796
-          },
-          {
-            lng: 104.183216,
-            lat: 30.52845
-          }
-        ]
-      ],
       drawConfig: {
         strokeColor: '#007ed2', // 边界颜色
         fillColor: '#007ed2', // 区域颜色
         fillOpacity: 0.2, // 区域透明度
         strokeOpacity: 0.5, // 边界线透明度
         strokeWidth: 1 // 边界线宽
-      }
+      },
+      paths: [],
+      saveVisible: false,
+      name: ''
     }
   },
-  mounted () {},
+  mounted () {
+    this.getRange()
+  },
   methods: {
+    getRange () {
+      this.$http.town.getRange().then(res => {
+        this.paths.push(res)
+      })
+    },
     handler ({ BMap, map }) {
       map.enableScrollWheelZoom(true)
     },
@@ -125,9 +112,9 @@ export default {
     toggle (name) {
       this[name].editing = !this[name].editing
       // 在这里做一步判断，如果有路径且开启绘制就把原来的路径清空
-      if (this.polygonPath.paths && this.polygonPath.editing) {
-        this.polygonPath.paths = []
-      }
+      // if (this.polygonPath.paths && this.polygonPath.editing) {
+      //   this.polygonPath.paths = []
+      // }
     },
     // 鼠标移动时
     syncPolygon (e) {
@@ -179,7 +166,21 @@ export default {
       console.log(e.currentTarget.so)
       console.log(this.polygonPath.paths[0])
     },
-    save () {}
+    save () {
+      this.saveVisible = true
+    },
+    submit () {
+      let queryData = {
+        townId: 1,
+        points: this.paths[0]
+      }
+      this.$http.town.saveRange(queryData).then(res => {
+        this.getRange()
+      })
+    },
+    lineupdateHandler (e) {
+      this.polygonPath.paths[0] = e.target.getPath()
+    }
   }
 }
 </script>

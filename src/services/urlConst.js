@@ -1,5 +1,6 @@
 const prefix = window.ecourtApp.api
 
-export const users = {
-  login: prefix + '/login'
+export const town = {
+  getRange: prefix + 'town/getRange/1',
+  saveRange: prefix + 'town/saveRange'
 }
