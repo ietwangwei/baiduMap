@@ -14,7 +14,7 @@
         @click="paintPolygon"
         @rightclick="newPolygon"
       >
-        <!-- 绘制区域 -->
+        <!-- 已经绘制的区域 -->
         <bm-polygon
           v-for="(path, index) of paths"
           :path="path"
@@ -24,9 +24,22 @@
           :fill-opacity="drawConfig.fillOpacity"
           :stroke-opacity="drawConfig.strokeOpacity"
           :stroke-weight="drawConfig.strokeWidth"
+          :editing="polygonPath.editing"
+          @lineupdate="lineupdateHandler"
+        />
+        <!-- 绘制区域 -->
+        <bm-polygon
+          v-for="(path, index) of polygonPath.paths"
+          :path="path"
+          :key="index"
+          :stroke-color="drawConfig.strokeColor"
+          :fill-color="drawConfig.fillColor"
+          :fill-opacity="drawConfig.fillOpacity"
+          :stroke-opacity="drawConfig.strokeOpacity"
+          :stroke-weight="drawConfig.strokeWidth"
         />
         <bm-control>
-          <el-button @click="toggle()" size="small">{{ editing ? '停止绘制' : '开始绘制' }}</el-button>
+          <el-button @click="toggle('polygonPath')" size="small">{{ polygonPath.editing ? '停止绘制' : '开始绘制' }}</el-button>
           <el-button @click="save" size="small">保 存</el-button>
         </bm-control>
         <bm-local-search :keyword="keyword" :auto-viewport="true"></bm-local-search>
@@ -63,15 +76,20 @@ export default {
       keyword: '',
       center: { lng: 104.075707, lat: 30.516006 },
       zoom: 14,
-      editing: false,
-      paths: [],
+      polygonPath: {
+        editing: false,
+        paths: []
+      },
       drawConfig: {
         strokeColor: '#007ed2', // 边界颜色
         fillColor: '#007ed2', // 区域颜色
         fillOpacity: 0.2, // 区域透明度
         strokeOpacity: 0.5, // 边界线透明度
         strokeWidth: 1 // 边界线宽
-      }
+      },
+      paths: [],
+      saveVisible: false,
+      name: ''
     }
   },
   mounted () {
@@ -92,14 +110,18 @@ export default {
     },
     // 开启多边形绘制
     toggle (name) {
-      this.editing = !this.editing
+      this[name].editing = !this[name].editing
+      // 在这里做一步判断，如果有路径且开启绘制就把原来的路径清空
+      // if (this.polygonPath.paths && this.polygonPath.editing) {
+      //   this.polygonPath.paths = []
+      // }
     },
     // 鼠标移动时
     syncPolygon (e) {
-      if (!this.editing) {
+      if (!this.polygonPath.editing) {
         return
       }
-      const { paths } = this.paths
+      const { paths } = this.polygonPath
       if (!paths.length) {
         return
       }
@@ -118,7 +140,7 @@ export default {
         return
       }
       // 当开始绘制后把按钮调回开始绘制状态，防止绘制多个图形
-      this.editing = !this.editing
+      this['polygonPath'].editing = !this['polygonPath'].editing
       const { paths } = this.polygonPath
       if (!paths.length) {
         paths.push([])
@@ -129,14 +151,14 @@ export default {
       if (path.length) {
         paths.push([])
       }
-      console.log(this.paths)
+      console.log(this.polygonPath.paths)
     },
     // 设置节点
     paintPolygon (e) {
-      if (!this.editing) {
+      if (!this.polygonPath.editing) {
         return
       }
-      const { paths } = this.paths
+      const { paths } = this.polygonPath
       !paths.length && paths.push([])
       paths[paths.length - 1].push(e.point)
     },
@@ -146,6 +168,8 @@ export default {
     },
     save () {
       this.saveVisible = true
+    },
+    submit () {
       let queryData = {
         townId: 1,
         points: this.paths[0]
