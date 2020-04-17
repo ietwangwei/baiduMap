@@ -14,7 +14,7 @@
         @click="paintPolygon"
         @rightclick="newPolygon"
       >
-        <!-- 已经绘制的区域 -->
+        <!-- 绘制区域 -->
         <bm-polygon
           v-for="(path, index) of paths"
           :path="path"
@@ -25,25 +25,23 @@
           :stroke-opacity="drawConfig.strokeOpacity"
           :stroke-weight="drawConfig.strokeWidth"
         />
-        <!-- 绘制区域 -->
-        <bm-polygon
-          v-for="(path, index) of polygonPath.paths"
-          :path="path"
-          :key="index"
-          :stroke-color="drawConfig.strokeColor"
-          :fill-color="drawConfig.fillColor"
-          :fill-opacity="drawConfig.fillOpacity"
-          :stroke-opacity="drawConfig.strokeOpacity"
-          :stroke-weight="drawConfig.strokeWidth"
-          @click="alertpath"
-        />
         <bm-control>
-          <el-button @click="toggle('polygonPath')" size="small">{{ polygonPath.editing ? '停止绘制' : '开始绘制' }}</el-button>
+          <el-button @click="toggle()" size="small">{{ editing ? '停止绘制' : '开始绘制' }}</el-button>
           <el-button @click="save" size="small">保 存</el-button>
         </bm-control>
         <bm-local-search :keyword="keyword" :auto-viewport="true"></bm-local-search>
       </baidu-map>
     </div>
+    <el-dialog
+      :visible="saveVisible"
+      title="保存"
+    >
+      <el-form>
+        <el-form-item label="名称" prop="name">
+          <el-input size="small" v-model="name" />
+        </el-form-item>
+      </el-form>
+    </el-dialog>
   </div>
 </template>
 
@@ -64,45 +62,9 @@ export default {
       title: 'demo',
       keyword: '',
       center: { lng: 104.075707, lat: 30.516006 },
-      zoom: 13,
-      polygonPath: {
-        editing: false,
-        paths: [] // 绘制完成后的经纬度，其实是在画的时候动态push的，因为在点击的时候触发了 paintPolygon 函数
-      },
-      paths: [
-        [
-          {
-            lng: 104.014371,
-            lat: 30.578831
-          },
-          {
-            lng: 104.017748,
-            lat: 30.572239
-          },
-          {
-            lng: 104.022132,
-            lat: 30.57454
-          },
-          {
-            lng: 104.017389,
-            lat: 30.578831
-          }
-        ],
-        [
-          {
-            lng: 104.148146,
-            lat: 30.581443
-          },
-          {
-            lng: 104.118826,
-            lat: 30.506796
-          },
-          {
-            lng: 104.183216,
-            lat: 30.52845
-          }
-        ]
-      ],
+      zoom: 14,
+      editing: false,
+      paths: [],
       drawConfig: {
         strokeColor: '#007ed2', // 边界颜色
         fillColor: '#007ed2', // 区域颜色
@@ -112,8 +74,15 @@ export default {
       }
     }
   },
-  mounted () {},
+  mounted () {
+    this.getRange()
+  },
   methods: {
+    getRange () {
+      this.$http.town.getRange().then(res => {
+        this.paths.push(res)
+      })
+    },
     handler ({ BMap, map }) {
       map.enableScrollWheelZoom(true)
     },
@@ -123,18 +92,14 @@ export default {
     },
     // 开启多边形绘制
     toggle (name) {
-      this[name].editing = !this[name].editing
-      // 在这里做一步判断，如果有路径且开启绘制就把原来的路径清空
-      if (this.polygonPath.paths && this.polygonPath.editing) {
-        this.polygonPath.paths = []
-      }
+      this.editing = !this.editing
     },
     // 鼠标移动时
     syncPolygon (e) {
-      if (!this.polygonPath.editing) {
+      if (!this.editing) {
         return
       }
-      const { paths } = this.polygonPath
+      const { paths } = this.paths
       if (!paths.length) {
         return
       }
@@ -153,7 +118,7 @@ export default {
         return
       }
       // 当开始绘制后把按钮调回开始绘制状态，防止绘制多个图形
-      this['polygonPath'].editing = !this['polygonPath'].editing
+      this.editing = !this.editing
       const { paths } = this.polygonPath
       if (!paths.length) {
         paths.push([])
@@ -164,14 +129,14 @@ export default {
       if (path.length) {
         paths.push([])
       }
-      console.log(this.polygonPath.paths)
+      console.log(this.paths)
     },
     // 设置节点
     paintPolygon (e) {
-      if (!this.polygonPath.editing) {
+      if (!this.editing) {
         return
       }
-      const { paths } = this.polygonPath
+      const { paths } = this.paths
       !paths.length && paths.push([])
       paths[paths.length - 1].push(e.point)
     },
@@ -179,7 +144,19 @@ export default {
       console.log(e.currentTarget.so)
       console.log(this.polygonPath.paths[0])
     },
-    save () {}
+    save () {
+      this.saveVisible = true
+      let queryData = {
+        townId: 1,
+        points: this.paths[0]
+      }
+      this.$http.town.saveRange(queryData).then(res => {
+        this.getRange()
+      })
+    },
+    lineupdateHandler (e) {
+      this.polygonPath.paths[0] = e.target.getPath()
+    }
   }
 }
 </script>
