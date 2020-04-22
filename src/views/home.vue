@@ -2,10 +2,11 @@
   <div class="home-page">
     <div class="map-containe">
       <div class="actions">
-        <el-button size="small" @click="changeStatus('addPolygon')">{{ status === 'addPolygon' ? '取消' : '绘制' }}</el-button>
+        <el-button size="small" @click="changeStatus('addPolygon')">{{ status === 'addPolygon' ? '取消' : '绘制多边形' }}</el-button>
         <el-button size="small" @click="changeStatus('edit')">{{ status === 'edit' ? '取消' : '编辑' }}</el-button>
         <el-button size="small" @click="changeStatus('addMark')">{{ status === 'addMark' ? '取消' : '添加标记' }}</el-button>
         <el-button size="small" @click="changeStatus('addText')">{{ status === 'addText' ? '取消' : '添加文本' }}</el-button>
+        <el-button size="small" @click="changeStatus('addCircle')">{{ status === 'addCircle' ? '取消' : '绘制圆形' }}</el-button>
         <el-button size="small" @click="revoke">撤销</el-button>
         <el-button size="small" @click="save">保存</el-button>
       </div>
@@ -50,6 +51,15 @@
           :visible="currentWindow.visible"
           :events="currentWindow.events">
         </el-amap-info-window>
+        <!-- 圆形区域 -->
+        <el-amap-circle
+          v-for="(circle, index) in circles"
+          :key="index"
+          :center="circle.center"
+          :radius="circle.radius"
+          :fill-opacity="circle.fillOpacity"
+          :events="circle.events"
+        ></el-amap-circle>
         <!-- 主要区域 -->
         <el-amap-polygon
           v-for="(polygon, index) in polygons"
@@ -144,9 +154,10 @@ export default {
           _this.polygonClickHandler(e)
         }
       },
-      polygons: [],
-      markers: [],
-      texts: [],
+      polygons: [], // 多边形
+      markers: [], // 标记
+      texts: [], // 文本
+      circles: [], // 圆形
       status: '',
       drawConfig: {
         strokeColor: '#007ed2',
