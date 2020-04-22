@@ -2,5 +2,7 @@ const prefix = window.ecourtApp.api
 
 export const town = {
   getRange: prefix + 'town/getRange/1',
-  saveRange: prefix + 'town/saveRange'
+  saveRange: prefix + 'town/saveRange',
+  getCovers: prefix + 'town/getCover',
+  saveCovers: prefix + 'town/saveCovers'
 }
