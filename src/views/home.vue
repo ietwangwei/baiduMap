@@ -1,12 +1,12 @@
 <template>
   <div class="home-page">
-    <div class="actions">
-      <el-button size="small" @click="isAdding = !isAdding">{{ isAdding ? '取消' : '绘制' }}</el-button>
-      <el-button size="small" @click="isEditing = !isEditing">{{ isEditing ? '取消' : '编辑' }}</el-button>
-      <el-button size="small" @click="clear">重新绘制</el-button>
-      <el-button size="small" @click="save">保存</el-button>
-    </div>
     <div class="map-containe">
+      <div class="actions">
+        <el-button size="small" @click="changeStatus('add')">{{ status === 'add' ? '取消' : '绘制' }}</el-button>
+        <el-button size="small" @click="changeStatus('edit')">{{ status === 'edit' ? '取消' : '编辑' }}</el-button>
+        <!-- <el-button size="small" @click="revoke">撤销</el-button> -->
+        <el-button size="small" @click="save">保存</el-button>
+      </div>
       <el-amap-search-box
         class="search-box"
         :search-option="searchOption"
@@ -25,13 +25,13 @@
         <el-amap-marker
           v-for="(marker, index) in markers"
           :key="index"
-          :position="marker"
+          :position="marker.position"
         />
         <el-amap-polygon
           v-for="(polygon, index) in polygons"
-          :key="index"
+          :key="index + polygon.path"
           :vid="index"
-          :editable="isEditing"
+          :editable="status === 'edit'"
           :ref="`polygon_${index}`"
           :path="polygon.path"
           :draggable="polygon.draggable"
@@ -41,7 +41,6 @@
           :strokeWeight="drawConfig.strokeWeight"
           :fillColor="drawConfig.fillColor"
           :fillOpacity="drawConfig.fillOpacity"
-          @end="endHandler"
         />
       </el-amap>
     </div>
@@ -63,6 +62,7 @@ export default {
       mapCenter: [104.053185, 30.3755265],
       markers: [
         {
+          id: 0,
           position: [104.053185, 30.3755265],
           events: {
             click: () => {
@@ -74,6 +74,7 @@ export default {
           },
           visible: true,
           draggable: false,
+          content: 'test',
           template: '<span>煎茶路街道</span>'
         }
       ],
@@ -108,31 +109,27 @@ export default {
         moveend: () => {},
         zoomchange: () => {},
         click: e => {
-          if (_this.isAdding) {
+          if (_this.status === 'add') {
             _this.addpolygon(e)
           }
         }
       },
       polygons: [
         {
-          draggable: true,
+          draggable: false,
           path: [],
           events: {
-            end (e) {
-              _this.endHandler(e.target)
-            }
           }
         }
       ],
+      status: '',
       drawConfig: {
         strokeColor: '#007ed2',
-        strokeOpacity: 0.3,
+        strokeOpacity: 0.5,
         strokeWeight: 1,
         fillColor: '#007ed2',
-        fillOpacity: 0.2
+        fillOpacity: 0.4
       },
-      isEditing: false,
-      isAdding: false,
       path: []
     }
   },
@@ -174,18 +171,14 @@ export default {
       let path = this.polygons[0].path
       path.push(points)
       let polygon = {
-        draggable: true,
+        draggable: false,
         path: this.path,
         events: {
           click: () => {
             alert('click polygon')
-            console.log(amapManager.getComponent(0))
-            console.log(this.$refs.map.$$getCenter())
-            console.log(this.$refs.polygon_0[0].$$getPath())
           }
         }
       }
-      console.log(polygon)
       return polygon
     },
     // 添加节点
@@ -193,26 +186,34 @@ export default {
       let { lng, lat } = e.lnglat
       this.polygons.push(this.generatePath([lng, lat]))
     },
-    endHandler (polygon) {
-      let paths = polygon.getPath()
-      this.path = paths.map(i => {
-        return {
-          lng: i.lng,
-          lat: i.lat
-        }
-      })
-    },
-    clear () {
-      this.polygons[0].path = []
+    revoke () {
+      this.polygons[0].path.pop()
+      this.changeStatus('')
     },
     save () {
+      let points = []
+      let path = this.$refs.polygon_0[0].$$getPath()
+      path.forEach(i => {
+        points.push({
+          lng: i[0],
+          lat: i[1]
+        })
+      })
       let queryData = {
         townId: 1,
-        points: this.path
+        points
       }
+      this.changeStatus('')
       this.$http.town.saveRange(queryData).then(res => {
         this.getRange()
       })
+    },
+    changeStatus (type) {
+      if (this.status === type) {
+        this.status = ''
+      } else {
+        this.status = type
+      }
     }
   }
 }
@@ -221,13 +222,23 @@ export default {
 <style lang="scss">
 .map-containe {
   position: relative;
-  width: 600px;
-  height: 600px;
+  width: 100vw;
+  height: 100vh;
 
   .search-box {
     position: absolute;
     top: 25px;
     left: 20px;
+    padding: 0 12px;
+  }
+
+  .actions {
+    position: absolute;
+    top: 25px;
+    right: 100px;
+    z-index: 100;
+    background-color: #FFF;
+    padding: 12px;
   }
 }
 </style>
