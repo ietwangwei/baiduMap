@@ -8,7 +8,7 @@ import $http from './services/queryService'
 import $nav from './utils/nav'
 import GlobalLoading from './utils/globalLoading'
 import AMap from 'vue-amap'
-
+import 'lib-flexible/flexible'
 import './styles/'
 Vue.use(AMap)
 

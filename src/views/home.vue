@@ -1,20 +1,22 @@
 <template>
   <div class="home-page">
     <div class="map-containe">
-      <div class="actions">
-        <el-button size="small" @click="changeStatus('addPolygon')">{{ status === 'addPolygon' ? '取消' : '绘制多边形' }}</el-button>
-        <!-- <el-button size="small" @click="changeStatus('addMark')">{{ status === 'addMark' ? '取消' : '添加标记' }}</el-button> -->
-        <el-button size="small" @click="changeStatus('addText')">{{ status === 'addText' ? '取消' : '添加文本' }}</el-button>
-        <el-button size="small" @click="changeStatus('addCircle')">{{ status === 'addCircle' ? '取消' : '绘制圆形' }}</el-button>
-        <el-button size="small" @click="changeStatus('edit')">{{ status === 'edit' ? '取消' : '编辑' }}</el-button>
-        <el-button size="small" @click="revoke">撤销</el-button>
-        <el-button size="small" @click="saveCovers">保存</el-button>
+      <div class="top-bar">
+        <div class="actions">
+          <el-button size="small" @click="changeStatus('addPolygon')">{{ status === 'addPolygon' ? '取消' : '绘制多边形' }}</el-button>
+          <!-- <el-button size="small" @click="changeStatus('addMark')">{{ status === 'addMark' ? '取消' : '添加标记' }}</el-button> -->
+          <el-button size="small" @click="changeStatus('addText')">{{ status === 'addText' ? '取消' : '添加文本' }}</el-button>
+          <el-button size="small" @click="changeStatus('addCircle')">{{ status === 'addCircle' ? '取消' : '绘制圆形' }}</el-button>
+          <el-button size="small" @click="changeStatus('edit')">{{ status === 'edit' ? '取消' : '编辑' }}</el-button>
+          <el-button size="small" @click="revoke">撤销</el-button>
+          <el-button size="small" @click="saveCovers">保存</el-button>
+        </div>
+        <el-amap-search-box
+          class="search-box"
+          :search-option="searchOption"
+          :on-search-result="onSearchResult"
+        />
       </div>
-      <el-amap-search-box
-        class="search-box"
-        :search-option="searchOption"
-        :on-search-result="onSearchResult"
-      ></el-amap-search-box>
       <el-amap
         ref="map"
         vid="amapDemo"
@@ -218,17 +220,12 @@ export default {
     this.getCovers()
   },
   methods: {
-    adapterPath (path) {
-      return path.map(point => {
-        return [point.lng, point.lat]
-      })
-    },
     // 获取数据
     getCovers () {
       this.$http.town.getCovers().then(res => {
         res.forEach(item => {
           if (item.type === 'polygon') {
-            item.path = this.adapterPath(item.path)
+            item.path = this.point2Lnglat(item.path)
           }
         })
         this.covers = res
@@ -525,10 +522,18 @@ export default {
     },
     // 保存
     saveCovers () {
+      let covers = []
+      this.covers.forEach(item => {
+        if (item.type === 'polygon') {
+          covers.push(Object.assign({}, item, { path: this.lnglat2Pointer(item.path) }))
+        } else {
+          covers.push(item)
+        }
+      })
       let queryData = {
-        covers: this.covers
+        covers
       }
-      console.log(JSON.stringify(this.covers))
+      console.log(JSON.stringify(covers))
       this.$http.town.saveCovers(queryData).then(res => {
         if (res.code === 200) {
           this.$message.success('保存成功')
@@ -593,6 +598,26 @@ export default {
     isEditable (cover) {
       if (!cover.editable) return false
       if (this.status === 'edit') return true
+    },
+    point2Lnglat (path) {
+      return path.map(point => {
+        return [point.lng, point.lat]
+      })
+    },
+    lnglat2Pointer (path) {
+      return path.map(point => {
+        if (Array.isArray(point)) {
+          return {
+            lng: point[0],
+            lat: point[1]
+          }
+        } else {
+          return {
+            lng: point.lng,
+            lat: point.lat
+          }
+        }
+      })
     }
   }
 }
@@ -606,15 +631,19 @@ export default {
 
   .search-box {
     position: absolute;
-    top: 25px;
+    top: 24px;
     left: 20px;
     padding: 0 12px;
+    height: 60px;
   }
 
   .actions {
     position: absolute;
     top: 25px;
-    right: 100px;
+    right: 200px;
+    display: flex;
+    align-items: center;
+    height: 60px;
     z-index: 100;
     background-color: #FFF;
     padding: 12px;
@@ -625,11 +654,9 @@ export default {
     padding: 3px 6px;
     font-size: 12px;
   }
-
-  .amap-icon {
-    img {
-      width: 12px;
-    }
+  img {
+    width: 12px;
   }
 }
+
 </style>
