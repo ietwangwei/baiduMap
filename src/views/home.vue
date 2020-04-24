@@ -3,12 +3,12 @@
     <div class="map-containe">
       <div class="actions">
         <el-button size="small" @click="changeStatus('addPolygon')">{{ status === 'addPolygon' ? '取消' : '绘制多边形' }}</el-button>
-        <el-button size="small" @click="changeStatus('edit')">{{ status === 'edit' ? '取消' : '编辑' }}</el-button>
-        <el-button size="small" @click="changeStatus('addMark')">{{ status === 'addMark' ? '取消' : '添加标记' }}</el-button>
+        <!-- <el-button size="small" @click="changeStatus('addMark')">{{ status === 'addMark' ? '取消' : '添加标记' }}</el-button> -->
         <el-button size="small" @click="changeStatus('addText')">{{ status === 'addText' ? '取消' : '添加文本' }}</el-button>
         <el-button size="small" @click="changeStatus('addCircle')">{{ status === 'addCircle' ? '取消' : '绘制圆形' }}</el-button>
+        <el-button size="small" @click="changeStatus('edit')">{{ status === 'edit' ? '取消' : '编辑' }}</el-button>
         <el-button size="small" @click="revoke">撤销</el-button>
-        <el-button size="small" @click="save">保存</el-button>
+        <el-button size="small" @click="saveCovers">保存</el-button>
       </div>
       <el-amap-search-box
         class="search-box"
@@ -25,25 +25,68 @@
         :events="events"
         class="amap-demo"
       >
-        <!-- 标记物 -->
-        <el-amap-marker
-          v-for="(marker, index) in markers"
+        <div
+          v-for="(cover ,index) in covers"
           :key="index"
-          :position="marker.position"
-          :icon="marker.icon"
-          :draggable="status === 'addMark'"
-        />
-        <!-- 文本 -->
-        <el-amap-text
-          v-for="text in texts"
-          :key="text.id"
-          :text="text.text"
-          :offset="text.offset"
-          :position="text.position"
-          :events="text.events"
-          :draggable="status === 'addText'"
-          class="test"
-        />
+          class="cover-item"
+        >
+          <!-- 文本标记 -->
+          <div
+            v-if="cover.type === 'mark'"
+            class="mark"
+          >
+            <el-amap-text
+              :text="cover.text"
+              :offset="cover.offset"
+              :position="cover.position"
+              :events="coverEvents[cover.type]"
+              :draggable="cover.draggable"
+            />
+            <el-amap-marker
+              :vid="index"
+              :position="cover.position"
+              :events="coverEvents[cover.type]"
+              :draggable="cover.draggable"
+            />
+          </div>
+          <!-- 圆形区域 -->
+          <div
+            v-if="cover.type === 'circle'"
+            class="circle"
+          >
+            <el-amap-circle
+              :center="cover.center"
+              :radius="cover.radius"
+              :strokeColor="cover.strokeColor"
+              :strokeOpacity="cover.strokeOpacity"
+              :strokeWeight="cover.strokeWeight"
+              :fillColor="cover.fillColor"
+              :fillOpacity="cover.fillOpacity"
+              :events="coverEvents[cover.type]"
+              :draggable="cover.draggable"
+              :editable="cover.editable"
+            />
+          </div>
+          <!-- 多边形区域 -->
+          <div
+            v-if="cover.type === 'polygon'"
+            class="polygon"
+          >
+            <el-amap-polygon
+              :vid="index"
+              :ref="`polygon_${index}`"
+              :path="cover.path"
+              :events="coverEvents[cover.type]"
+              :strokeColor="cover.strokeColor"
+              :strokeOpacity="cover.strokeOpacity"
+              :strokeWeight="cover.strokeWeight"
+              :fillColor="cover.fillColor"
+              :fillOpacity="cover.fillOpacity"
+              :editable="cover.editable"
+              :draggable="cover.draggable"
+            />
+          </div>
+        </div>
         <!-- 信息窗口 -->
         <el-amap-info-window
           :position="currentWindow.position"
@@ -51,31 +94,6 @@
           :visible="currentWindow.visible"
           :events="currentWindow.events">
         </el-amap-info-window>
-        <!-- 圆形区域 -->
-        <el-amap-circle
-          v-for="(circle, index) in circles"
-          :key="index"
-          :center="circle.center"
-          :radius="circle.radius"
-          :fill-opacity="circle.fillOpacity"
-          :events="circle.events"
-        ></el-amap-circle>
-        <!-- 主要区域 -->
-        <el-amap-polygon
-          v-for="(polygon, index) in polygons"
-          :key="index + polygon.path"
-          :vid="index"
-          :editable="status === 'edit'"
-          :ref="`polygon_${index}`"
-          :path="polygon.path"
-          :draggable="polygon.draggable"
-          :events="polygon.events"
-          :strokeColor="polygon.strokeColor"
-          :strokeOpacity="polygon.strokeOpacity"
-          :strokeWeight="polygon.strokeWeight"
-          :fillColor="polygon.fillColor"
-          :fillOpacity="polygon.fillOpacity"
-        />
       </el-amap>
     </div>
     <el-dialog
@@ -118,7 +136,11 @@ export default {
         position: [0, 0],
         content: '',
         visible: false,
-        events: {}
+        events: {
+          close (e) {
+            _this.currentWindow.visible = false
+          }
+        }
       },
       aMapManager: amapManager,
       zoom: 13,
@@ -151,13 +173,30 @@ export default {
         moveend: () => {},
         zoomchange: () => {},
         click: e => {
-          _this.polygonClickHandler(e)
+          _this.caoverClickHandler(e)
         }
       },
-      polygons: [], // 多边形
-      markers: [], // 标记
-      texts: [], // 文本
-      circles: [], // 圆形
+      covers: [],
+      coverEvents: {
+        'mark': {
+          click (e) {
+            _this.caoverClickHandler(e, 'mark')
+          },
+          dragend (e) {
+            _this.dragHandler(e)
+          }
+        },
+        'polygon': {
+          click (e) {
+            _this.caoverClickHandler(e, 'polygon')
+          }
+        },
+        'circle': {
+          click (e) {
+            _this.caoverClickHandler(e, 'circle')
+          }
+        }
+      },
       status: '',
       drawConfig: {
         strokeColor: '#007ed2',
@@ -166,7 +205,6 @@ export default {
         fillColor: '#007ed2',
         fillOpacity: 0.4
       },
-      path: [],
       visible: false,
       title: '',
       formData: {},
@@ -177,24 +215,28 @@ export default {
     }
   },
   mounted () {
-    this.getData()
+    this.getCovers()
   },
   methods: {
+    adapterPath (path) {
+      return path.map(point => {
+        return [point.lng, point.lat]
+      })
+    },
     // 获取数据
-    getData () {
-      this.$http.town.getRange().then(res => {
-        if (res.code === 200) {
-          let points = []
-          res.data.map(i => {
-            if (i.lng && i.lat) {
-              points.push([i.lng, i.lat])
-            }
-          })
-          this.generatePolygon()
-          this.polygons[0].path = points
-        } else {
-          this.$message.error(res.message)
-        }
+    getCovers () {
+      this.$http.town.getCovers().then(res => {
+        res.forEach(item => {
+          if (item.type === 'polygon') {
+            item.path = this.adapterPath(item.path)
+          }
+        })
+        this.covers = res
+        // if (res.code === 200) {
+        //   this.covers = res
+        // } else {
+        //   this.$message.error(res.message)
+        // }
       })
     },
     // 查询定位
@@ -216,43 +258,73 @@ export default {
       }
     },
     // 生成一个多边形
-    generatePolygon (points) {
-      const _this = this
+    generatePolygon () {
       let polygon = {
-        draggable: false,
-        path: [],
-        events: {
-          click (e) {
-            _this.polygonClickHandler(e)
-          }
-        }
+        type: 'polygon',
+        editable: true,
+        draggable: true,
+        path: []
       }
-      this.polygons.push(Object.assign({}, this.drawConfig, polygon))
+      this.covers.push(Object.assign({}, this.drawConfig, polygon))
+    },
+    // 生成一个圆形
+    generateCircle () {
+      let circle = {
+        type: 'circle',
+        draggable: true,
+        editable: true,
+        center: [0, 0],
+        radius: this.formData.radius
+      }
+      this.covers.push(Object.assign({}, this.drawConfig, circle))
+    },
+    // 生成一个标记
+    generateMark (e) {
+      const mark = {
+        id: this.getUUid(),
+        type: 'mark',
+        editable: true,
+        draggable: true,
+        position: this.currentPosition,
+        text: this.formData.title,
+        content: this.formData.content,
+        offset: [0, 12]
+      }
+      this.covers.push(mark)
     },
     // 点击事件
-    polygonClickHandler (e) {
+    caoverClickHandler (e, type) {
       this.getPosition(e)
       switch (this.status) {
         case 'addPolygon':
           this.addpolygon(e)
           break
-        case 'addMark':
-          this.addMark(e)
-          break
         case 'addText':
           this.setForm()
           this.visible = true
           break
+        case 'addCircle':
+          this.addCircle(e)
+          break
+        case 'edit':
+          // todo
+          break
         default:
-          console.log('click handler is not found')
+          this.setInfo(e, type)
           break
       }
     },
     // 添加节点
     addpolygon (e) {
       let { lng, lat } = e.lnglat
-      let len = this.polygons.length
-      this.polygons[len - 1].path.push([lng, lat])
+      let len = this.covers.length
+      this.covers[len - 1].path.push([lng, lat])
+    },
+    // 添加圆形
+    addCircle (e) {
+      let { lng, lat } = e.lnglat
+      let len = this.covers.length
+      this.covers[len - 1].center = [lng, lat]
     },
     // 获取uuid
     getUUid () {
@@ -262,26 +334,6 @@ export default {
     getPosition (e) {
       let { lng, lat } = e.lnglat
       this.currentPosition = [lng, lat]
-    },
-    // 增加标记
-    addMark (e) {
-      const _this = this
-      const mark = {
-        id: this.getUUid(),
-        position: this.currentPosition,
-        events: {
-          click: () => {
-            alert('click marker')
-          },
-          dragend: (e) => {
-            _this.dragHandler(e)
-          }
-        },
-        visible: true,
-        draggable: true,
-        content: 'test'
-      }
-      this.markers.push(mark)
     },
     // 设置表单
     setForm () {
@@ -296,6 +348,61 @@ export default {
                 label: '名称',
                 prop: 'name',
                 type: 'input'
+              },
+              {
+                label: '边界颜色',
+                prop: 'strokeColor',
+                type: 'colorPicker'
+              },
+              {
+                label: '边界透明度',
+                prop: 'strokeOpacity',
+                type: 'inputNumber',
+                min: 0,
+                max: 1,
+                step: 0.1
+              },
+              {
+                label: '边界宽度',
+                prop: 'strokeWeight',
+                type: 'inputNumber',
+                min: 1,
+                max: 10,
+                step: 1
+              },
+              {
+                label: '区域填充色',
+                prop: 'fillColor',
+                type: 'colorPicker'
+              },
+              {
+                label: '区域透明度',
+                prop: 'fillOpacity',
+                type: 'inputNumber',
+                min: 0,
+                max: 1,
+                step: 0.1
+              }
+            ]
+          }
+          break
+        case 'addCircle':
+          this.title = '添加圆形'
+          this.formData = Object.assign({}, { name: '', radius: 100 }, this.drawConfig)
+          this.formConfig = {
+            props: [
+              {
+                label: '名称',
+                prop: 'name',
+                type: 'input'
+              },
+              {
+                label: '半径',
+                prop: 'radius',
+                type: 'inputNumber',
+                min: 10,
+                max: 1000,
+                step: 10
               },
               {
                 label: '边界颜色',
@@ -361,31 +468,11 @@ export default {
     dragHandler (e) {
       debugger
     },
-    // 添加文本
-    addText (e) {
-      const _this = this
-      const text = {
-        id: this.getUUid(),
-        position: this.currentPosition,
-        text: this.formData.title,
-        content: this.formData.content,
-        offset: [0, 12],
-        events: {
-          click () {
-            alert('click text')
-          },
-          dragend (e) {
-            _this.dragHandler(e)
-          }
-        }
-      }
-      this.texts.push(text)
-    },
     // 提交
     submit () {
       switch (this.status) {
         case 'addText':
-          this.addText()
+          this.generateMark()
           this.visible = false
           break
         case 'addPolygon':
@@ -399,6 +486,17 @@ export default {
           this.generatePolygon()
           this.visible = false
           break
+        case 'addCircle':
+          this.drawConfig = {
+            strokeColor: this.formData.strokeColor,
+            strokeOpacity: this.formData.strokeOpacity,
+            strokeWeight: this.formData.strokeWeight,
+            fillColor: this.formData.fillColor,
+            fillOpacity: this.formData.fillOpacity
+          }
+          this.generateCircle()
+          this.visible = false
+          break
         default:
           break
       }
@@ -408,19 +506,16 @@ export default {
       let type = this.status
       switch (type) {
         case 'addPolygon':
-          let len = this.polygons.length
-          this.polygons[len - 1].path.pop()
-          if (this.polygons[len - 1].path.length === 0) {
-            this.polygons.pop()
-          }
+          let len = this.covers.length
+          this.covers[len - 1].path.pop()
           console.log('pathpop')
           break
         case 'addMark':
-          this.markers.pop()
+          this.covers.pop()
           console.log('标记pop')
           break
         case 'addText':
-          this.texts.pop()
+          this.covers.pop()
           console.log('文本pop')
           break
         default:
@@ -428,24 +523,13 @@ export default {
           break
       }
     },
-    saveRange () {},
-    saveCovers () {},
     // 保存
-    save () {
-      let points = []
-      let path = this.$refs.polygon_0[0].$$getPath()
-      path.forEach(i => {
-        points.push({
-          lng: i[0],
-          lat: i[1]
-        })
-      })
+    saveCovers () {
       let queryData = {
-        townId: 1,
-        points
+        covers: this.covers
       }
-      this.changeStatus('')
-      this.$http.town.saveRange(queryData).then(res => {
+      console.log(JSON.stringify(this.covers))
+      this.$http.town.saveCovers(queryData).then(res => {
         if (res.code === 200) {
           this.$message.success('保存成功')
         } else {
@@ -463,18 +547,52 @@ export default {
           case 'addPolygon':
             this.setForm()
             this.visible = true
-            break
-          case 'addMark':
-            console.log('添加标记')
+            console.log('绘制多边形')
             break
           case 'addText':
             console.log('添加文本')
+            break
+          case 'addCircle':
+            this.setForm()
+            this.visible = true
+            console.log('添加圆形')
             break
           default:
             console.log(type)
             break
         }
       }
+    },
+    // 获取窗口信息
+    setInfo (e, type) {
+      let target = e.target
+      let filterCovers = this.covers.filter(cover => {
+        return cover.type === type
+      })
+      if (filterCovers.length) {
+        switch (type) {
+          case 'mark':
+            if (typeof target.getPosition !== 'function') return
+            let position = target.getPosition()
+            let currentPosition = [position.lng, position.lat]
+            let mark = filterCovers.filter(i => {
+              return JSON.stringify(i.position) === JSON.stringify(currentPosition)
+            })[0]
+            this.currentWindow = {
+              position: currentPosition,
+              content: mark.content,
+              visible: true
+            }
+            break
+          default:
+            console.log(type)
+            break
+        }
+      }
+    },
+    isEditable (cover) {
+      if (!cover.editable) return false
+      if (this.status === 'edit') return true
     }
   }
 }

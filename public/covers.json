@@ -1,0 +1,45 @@
+[{
+  "strokeColor": "#007ed2",
+  "strokeOpacity": 0.5,
+  "strokeWeight": 1,
+  "fillColor": "#007ed2",
+  "fillOpacity": 0.4,
+  "type": "polygon",
+  "draggable": false,
+  "path": [{
+    "P": 30.391815,
+    "O": 104.00134300000002,
+    "lng": 104.001343,
+    "lat": 30.391815
+  }, {
+    "P": 30.35716,
+    "O": 103.98314700000003,
+    "lng": 103.983147,
+    "lat": 30.35716
+  }, {
+    "P": 30.358789,
+    "O": 104.01953900000001,
+    "lng": 104.019539,
+    "lat": 30.358789
+  }],
+  "events": {}
+}, {
+  "id": "uuid1587693872517",
+  "type": "mark",
+  "position": [104.013531, 30.396554],
+  "text": "测试",
+  "content": "666",
+  "offset": [0, 12],
+  "events": {}
+}, {
+  "strokeColor": "#007ed2",
+  "strokeOpacity": 0.5,
+  "strokeWeight": 1,
+  "fillColor": "#007ed2",
+  "fillOpacity": 0.4,
+  "type": "circle",
+  "draggable": false,
+  "center": [104.03001, 30.380117],
+  "radius": 100,
+  "events": {}
+}]
